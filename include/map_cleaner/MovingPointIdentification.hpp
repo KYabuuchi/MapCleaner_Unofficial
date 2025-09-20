@@ -29,7 +29,7 @@ private:
   pcl::VoxelGridLarge<PointType> vg_;
 
   PublisherPtr pub_ptr_;
-  tf2_ros::StaticTransformBroadcaster static_tf_br_;
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_br_;
   std::string frame_id_;
 
   enum class ComparisonResult {
@@ -224,14 +224,14 @@ private:
       vis_cloud.push_back(vis_p);
     }
 
-    sensor_msgs::PointCloud2 cloud_msg;
+    sensor_msgs::msg::PointCloud2 cloud_msg;
     pcl::toROSMsg(vis_cloud, cloud_msg);
     cloud_msg.header.frame_id = frame_id_;
-    cloud_msg.header.stamp = ros::Time::now();
+    cloud_msg.header.stamp = rclcpp::Clock().now();
     pub_ptr_->publish(cloud_msg);
 
-    geometry_msgs::TransformStamped static_tf;
-    static_tf.header.stamp = ros::Time::now();
+    geometry_msgs::msg::TransformStamped static_tf;
+    static_tf.header.stamp = rclcpp::Clock().now();
     static_tf.header.frame_id = frame_id_;
     static_tf.child_frame_id = "lidar";
     static_tf.transform.translation.x = frame.t[0];
@@ -241,7 +241,7 @@ private:
     static_tf.transform.rotation.y = frame.r.y();
     static_tf.transform.rotation.z = frame.r.z();
     static_tf.transform.rotation.w = frame.r.w();
-    static_tf_br_.sendTransform(static_tf);
+    static_tf_br_->sendTransform(static_tf);
   }
 
 public:
@@ -252,7 +252,10 @@ public:
                             const float threshold, const int frame_skip,
                             const float submap_update_dist,
                             const PublisherPtr pub_ptr = nullptr,
-                            const std::string &frame_id = "map") {
+                            const std::string &frame_id = "map",
+                            rclcpp::Node *node = nullptr)
+      : static_tf_br_(
+            std::make_shared<tf2_ros::StaticTransformBroadcaster>(node)) {
     vg_.setLeafSize(voxel_leaf_size, voxel_leaf_size, voxel_leaf_size);
 
     fov_h_ = fov_h;
@@ -324,7 +327,8 @@ public:
       // auto st = ros::WallTime::now();
       DataLoaderBase::Frame frame = loader->loadFrame(i);
       if (frame.frame->empty()) {
-        RCLCPP_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
+        RCLCPP_WARN_STREAM(rclcpp::get_logger("moving_point_identification"),
+                           "Frame " << frame.idx + 1 << " is empty.");
         continue;
       }
       // std::cout << "load: " << (ros::WallTime::now() - st).toSec() << " sec"

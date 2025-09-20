@@ -54,7 +54,8 @@ public:
                PIndices &out_above_indices, PIndices &out_below_indices,
                PIndices &out_other_indices) {
     if (!grid.exists(input_layer_name_)) {
-      RCLCPP_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
+      RCLCPP_ERROR_STREAM(rclcpp::get_logger("divide_by_terrain"),
+                          "GridMap Does Not Have The Required Layers.");
       return false;
     }
 

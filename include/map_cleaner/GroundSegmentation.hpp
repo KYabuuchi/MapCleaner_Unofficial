@@ -18,7 +18,7 @@ public:
 private:
   PatchWorkppPtr ground_seg_;
   PublisherPtr pub_ptr_;
-  tf2_ros::StaticTransformBroadcaster static_tf_br_;
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_br_;
   pcl::VoxelGridLarge<PointType> vg_;
   bool use_voxel_grid_;
   std::string frame_id_;
@@ -90,14 +90,14 @@ private:
       vis_cloud.push_back(vis_p);
     }
 
-    sensor_msgs::PointCloud2 cloud_msg;
+    sensor_msgs::msg::PointCloud2 cloud_msg;
     pcl::toROSMsg(vis_cloud, cloud_msg);
     cloud_msg.header.frame_id = frame_id_;
-    cloud_msg.header.stamp = ros::Time::now();
+    cloud_msg.header.stamp = rclcpp::Clock().now();
     pub_ptr_->publish(cloud_msg);
 
-    geometry_msgs::TransformStamped static_tf;
-    static_tf.header.stamp = ros::Time::now();
+    geometry_msgs::msg::TransformStamped static_tf;
+    static_tf.header.stamp = rclcpp::Clock().now();
     static_tf.header.frame_id = frame_id_;
     static_tf.child_frame_id = "lidar";
     static_tf.transform.translation.x = frame.t[0];
@@ -107,7 +107,7 @@ private:
     static_tf.transform.rotation.y = frame.r.y();
     static_tf.transform.rotation.z = frame.r.z();
     static_tf.transform.rotation.w = frame.r.w();
-    static_tf_br_.sendTransform(static_tf);
+    static_tf_br_->sendTransform(static_tf);
   }
 
 public:
@@ -116,7 +116,10 @@ public:
                      const float voxel_leaf_size = 0.1,
                      const int frame_skip = 0,
                      const PublisherPtr pub_ptr = nullptr,
-                     const std::string &frame_id = "map") {
+                     const std::string &frame_id = "map",
+                     rclcpp::Node *node = nullptr)
+      : static_tf_br_(
+            std::make_shared<tf2_ros::StaticTransformBroadcaster>(node)) {
     ground_seg_ = PatchWorkppPtr(new patchwork::PatchWorkpp(params));
     pub_ptr_ = pub_ptr;
     frame_id_ = frame_id;
@@ -151,7 +154,8 @@ public:
         continue;
 
       if (frame.frame->empty()) {
-        RCLCPP_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
+        RCLCPP_WARN_STREAM(rclcpp::get_logger("ground_segmentation"),
+                           "Frame " << frame.idx + 1 << " is empty.");
         continue;
       }
 
@@ -179,7 +183,8 @@ public:
       if ((int64_t)cloud.size() + (int64_t)ground_frame->size() +
               (int64_t)nonground_frame->size() >
           INT32_MAX) {
-        RCLCPP_ERROR_STREAM("Over INT32_MAX");
+        RCLCPP_ERROR_STREAM(rclcpp::get_logger("ground_segmentation"),
+                            "Over INT32_MAX");
         return false;
       }
 

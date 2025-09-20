@@ -4,6 +4,7 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <memory>
 #include <nanoflann/nanoflann.hpp>
+#include <pcl/PointIndices.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <rclcpp/rclcpp.hpp>

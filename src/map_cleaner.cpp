@@ -45,10 +45,10 @@ class MapCleaner : public rclcpp::Node {
 
   pcl::VoxelGridLarge<PointType> vis_vg_;
 
-  void
-  publishCloud(const CloudType::ConstPtr &cloud,
-               const PIndices::ConstPtr &indices, const std::string frame_id,
-               rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr &pub) {
+  void publishCloud(
+      const CloudType::ConstPtr &cloud, const PIndices::ConstPtr &indices,
+      const std::string frame_id,
+      rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr &pub) {
     CloudType::Ptr vis_cloud(new CloudType);
     if (indices != nullptr) {
       vis_vg_.setInputCloud(cloud);
@@ -147,7 +147,7 @@ class MapCleaner : public rclcpp::Node {
 
   void initialize() {
 
-    rclcpp::QoS qos = rclcpp::KeepLast(1).transientLocal();
+    rclcpp::QoS qos = rclcpp::QoS{1}.transient_local().reliable();
 
     pub_ground_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "ground_cloud", qos);
@@ -227,104 +227,110 @@ class MapCleaner : public rclcpp::Node {
     bool use_voxel_grid;
     float seg_voxel_leaf_size;
     int seg_frame_skip;
-    use_voxel_grid =
-        this->get_declare<bool>("/ground_segmentation/use_voxel_grid", false);
-    seg_voxel_leaf_size =
-        this->get_declare<float>("/ground_segmentation/voxel_leaf_size", 0.1);
+    use_voxel_grid = this->declare_parameter<bool>(
+        "/ground_segmentation/use_voxel_grid", false);
+    seg_voxel_leaf_size = this->declare_parameter<float>(
+        "/ground_segmentation/voxel_leaf_size", 0.1);
     seg_frame_skip =
-        this->get_declare<int>("/ground_segmentation/frame_skip", 0);
+        this->declare_parameter<int>("/ground_segmentation/frame_skip", 0);
 
     patchwork::Params patchwork_params;
     patchwork_params.verbose =
-        this->get_declare<bool>("/patchworkpp/verbose", false);
+        this->declare_parameter<bool>("/patchworkpp/verbose", false);
     patchwork_params.enable_RNR =
-        this->get_declare<bool>("/patchworkpp/enable_rnr", true);
+        this->declare_parameter<bool>("/patchworkpp/enable_rnr", true);
     patchwork_params.enable_RVPF =
-        this->get_declare<bool>("/patchworkpp/enable_rvpf", true);
+        this->declare_parameter<bool>("/patchworkpp/enable_rvpf", true);
     patchwork_params.enable_TGR =
-        this->get_declare<bool>("/patchworkpp/enable_tgr", true);
+        this->declare_parameter<bool>("/patchworkpp/enable_tgr", true);
     patchwork_params.num_iter =
-        this->get_declare<int>("/patchworkpp/num_iter", 3);
+        this->declare_parameter<int>("/patchworkpp/num_iter", 3);
     patchwork_params.num_lpr =
-        this->get_declare<int>("/patchworkpp/num_lpr", 20);
+        this->declare_parameter<int>("/patchworkpp/num_lpr", 20);
     patchwork_params.num_min_pts =
-        this->get_declare<int>("/patchworkpp/num_min_pts", 10);
+        this->declare_parameter<int>("/patchworkpp/num_min_pts", 10);
     patchwork_params.num_zones =
-        this->get_declare<int>("/patchworkpp/num_zones", 4);
+        this->declare_parameter<int>("/patchworkpp/num_zones", 4);
     patchwork_params.num_rings_of_interest =
-        this->get_declare<int>("/patchworkpp/num_rings_of_interest", 4);
-    patchwork_params.RNR_ver_angle_thr =
-        this->get_declare<double>("/patchworkpp/rnr_ver_angle_thr", -15.0);
+        this->declare_parameter<int>("/patchworkpp/num_rings_of_interest", 4);
+    patchwork_params.RNR_ver_angle_thr = this->declare_parameter<double>(
+        "/patchworkpp/rnr_ver_angle_thr", -15.0);
     patchwork_params.RNR_intensity_thr =
-        this->get_declare<double>("/patchworkpp/rnr_intensity_thr", 0.2);
+        this->declare_parameter<double>("/patchworkpp/rnr_intensity_thr", 0.2);
     patchwork_params.sensor_height =
-        this->get_declare<double>("/patchworkpp/sensor_height", 1.723);
+        this->declare_parameter<double>("/patchworkpp/sensor_height", 1.723);
     patchwork_params.th_seeds =
-        this->get_declare<double>("/patchworkpp/th_seeds", 0.125);
+        this->declare_parameter<double>("/patchworkpp/th_seeds", 0.125);
     patchwork_params.th_dist =
-        this->get_declare<double>("/patchworkpp/th_dist", 0.125);
+        this->declare_parameter<double>("/patchworkpp/th_dist", 0.125);
     patchwork_params.th_seeds_v =
-        this->get_declare<double>("/patchworkpp/th_seeds_v", 0.25);
+        this->declare_parameter<double>("/patchworkpp/th_seeds_v", 0.25);
     patchwork_params.th_dist_v =
-        this->get_declare<double>("/patchworkpp/th_dist_v", 0.1);
+        this->declare_parameter<double>("/patchworkpp/th_dist_v", 0.1);
     patchwork_params.max_range =
-        this->get_declare<double>("/patchworkpp/max_range", 80.0);
+        this->declare_parameter<double>("/patchworkpp/max_range", 80.0);
     patchwork_params.min_range =
-        this->get_declare<double>("/patchworkpp/min_range", 2.7);
+        this->declare_parameter<double>("/patchworkpp/min_range", 2.7);
     patchwork_params.uprightness_thr =
-        this->get_declare<double>("/patchworkpp/uprightness_thr", 0.707);
-    patchwork_params.adaptive_seed_selection_margin = this->get_declare<double>(
-        "/patchworkpp/adaptive_seed_selection_margin", -1.2);
+        this->declare_parameter<double>("/patchworkpp/uprightness_thr", 0.707);
+    patchwork_params.adaptive_seed_selection_margin =
+        this->declare_parameter<double>(
+            "/patchworkpp/adaptive_seed_selection_margin", -1.2);
     patchwork_params.num_sectors_each_zone =
-        this->get_declare<std::vector<int>>(
+        this->declare_parameter<std::vector<long>>(
             "/patchworkpp/num_sectors_each_zone", {16, 32, 54, 32});
-    patchwork_params.num_rings_each_zone = this->get_declare<std::vector<int>>(
-        "/patchworkpp/num_rings_each_zone", {2, 4, 4, 4});
+    patchwork_params.num_rings_each_zone =
+        this->declare_parameter<std::vector<long>>(
+            "/patchworkpp/num_rings_each_zone", {2, 4, 4, 4});
     patchwork_params.max_flatness_storage =
-        this->get_declare<int>("/patchworkpp/max_flatness_storage", 1000);
-    patchwork_params.max_elevation_storage =
-        this->get_declare<int>("/patchworkpp/max_elevation_storage", 1000);
-    patchwork_params.elevation_thr = this->get_declare<std::vector<double>>(
-        "/patchworkpp/elevation_thr", {0.0, 0.0, 0.0, 0.0});
-    patchwork_params.flatness_thr = this->get_declare<std::vector<double>>(
-        "/patchworkpp/flatness_thr", {0.0, 0.0, 0.0, 0.0});
+        this->declare_parameter<int>("/patchworkpp/max_flatness_storage", 1000);
+    patchwork_params.max_elevation_storage = this->declare_parameter<int>(
+        "/patchworkpp/max_elevation_storage", 1000);
+    patchwork_params.elevation_thr =
+        this->declare_parameter<std::vector<double>>(
+            "/patchworkpp/elevation_thr", {0.0, 0.0, 0.0, 0.0});
+    patchwork_params.flatness_thr =
+        this->declare_parameter<std::vector<double>>(
+            "/patchworkpp/flatness_thr", {0.0, 0.0, 0.0, 0.0});
     if (in_process_vis)
       ground_seg_.reset(new GroundSegmentation(
           patchwork_params, use_voxel_grid, seg_voxel_leaf_size, seg_frame_skip,
-          pub_ptr_in_proc_vis_, frame_id_));
+          pub_ptr_in_proc_vis_, frame_id_, this));
     else
       ground_seg_.reset(new GroundSegmentation(patchwork_params, use_voxel_grid,
                                                seg_voxel_leaf_size,
                                                seg_frame_skip));
 
     // GridMapBuilder
-    resolution_ = this->get_declare<float>("/grid_map_builder/grid_res", 0.1);
+    resolution_ =
+        this->declare_parameter<float>("/grid_map_builder/grid_res", 0.1);
     grid_map_builder_.reset(new GridMapBuilder(resolution_, frame_id_));
 
     // VarianceFilter
     float variance_th;
     int variance_min_num;
     variance_th =
-        this->get_declare<float>("/variance_filter/variance_th", 0.01);
-    variance_min_num = this->get_declare<int>("/variance_filter/min_num", 3);
+        this->declare_parameter<float>("/variance_filter/variance_th", 0.01);
+    variance_min_num =
+        this->declare_parameter<int>("/variance_filter/min_num", 3);
     variance_filter_.reset(new VarianceFilter(variance_th, variance_min_num));
 
     // First BGKFilter
     double bgk1_kernel_radius, bgk1_lambda, bgk1_sigma;
     int bgk1_min_num;
     bgk1_kernel_radius =
-        this->get_declare<double>("/first_bgk/kernel_radius", 1.0);
-    bgk1_lambda = this->get_declare<double>("/first_bgk/lambda", 0.0);
-    bgk1_sigma = this->get_declare<double>("/first_bgk/sigma", 1.0);
-    bgk1_min_num = this->get_declare<int>("/first_bgk/min_num", 3);
+        this->declare_parameter<double>("/first_bgk/kernel_radius", 1.0);
+    bgk1_lambda = this->declare_parameter<double>("/first_bgk/lambda", 0.0);
+    bgk1_sigma = this->declare_parameter<double>("/first_bgk/sigma", 1.0);
+    bgk1_min_num = this->declare_parameter<int>("/first_bgk/min_num", 3);
     first_bgk_filter_.reset(
         new BGKFilter(bgk1_kernel_radius, bgk1_lambda, bgk1_sigma, bgk1_min_num,
                       "variance_filtered", "first_bgk_filtered"));
 
     // TrajectoryFilter
     double normal_th_deg;
-    normal_th_deg =
-        this->get_declare<double>("/trajectory_filter/normal_th_deg", 15.0);
+    normal_th_deg = this->declare_parameter<double>(
+        "/trajectory_filter/normal_th_deg", 15.0);
     trajectory_filter_.reset(
         new TrajectoryFilter((normal_th_deg / 180.0) * M_PI,
                              "first_bgk_filtered", "trajectory_filtered"));
@@ -333,10 +339,10 @@ class MapCleaner : public rclcpp::Node {
     double bgk2_kernel_radius, bgk2_lambda, bgk2_sigma;
     int bgk2_min_num;
     bgk2_kernel_radius =
-        this->get_declare<double>("/second_bgk/kernel_radius", 1.0);
-    bgk2_lambda = this->get_declare<double>("/second_bgk/lambda", 0.0);
-    bgk2_sigma = this->get_declare<double>("/second_bgk/sigma", 1.0);
-    bgk2_min_num = this->get_declare<int>("/second_bgk/min_num", 3);
+        this->declare_parameter<double>("/second_bgk/kernel_radius", 1.0);
+    bgk2_lambda = this->declare_parameter<double>("/second_bgk/lambda", 0.0);
+    bgk2_sigma = this->declare_parameter<double>("/second_bgk/sigma", 1.0);
+    bgk2_min_num = this->declare_parameter<int>("/second_bgk/min_num", 3);
     second_bgk_filter_.reset(
         new BGKFilter(bgk2_kernel_radius, bgk2_lambda, bgk2_sigma, bgk2_min_num,
                       "trajectory_filtered", "second_bgk_filtered"));
@@ -344,8 +350,8 @@ class MapCleaner : public rclcpp::Node {
     // MedianFilter
     bool enable_median;
     int median_kernel_size;
-    enable_median = this->get_declare<bool>("/median/enable", true);
-    median_kernel_size = this->get_declare<int>("/median/kernel_size", 3);
+    enable_median = this->declare_parameter<bool>("/median/enable", true);
+    median_kernel_size = this->declare_parameter<int>("/median/kernel_size", 3);
     if (enable_median) {
       median_filter_.reset(new MedianFilter(
           median_kernel_size, "second_bgk_filtered", "elevation"));
@@ -356,9 +362,10 @@ class MapCleaner : public rclcpp::Node {
     // DivideByTerrain
     bool on_terrain_only;
     double terrain_th;
-    on_terrain_only =
-        this->get_declare<bool>("/divide_by_terrain/on_terrain_only", false);
-    terrain_th = this->get_declare<double>("/divide_by_terrain/threshold", 0.1);
+    on_terrain_only = this->declare_parameter<bool>(
+        "/divide_by_terrain/on_terrain_only", false);
+    terrain_th =
+        this->declare_parameter<double>("/divide_by_terrain/threshold", 0.1);
     divide_by_terrain_.reset(
         new DivideByTerrain(terrain_th, on_terrain_only, "elevation"));
 
@@ -366,36 +373,38 @@ class MapCleaner : public rclcpp::Node {
     double voxel_leaf_size, fov_h, fov_v, res_h, res_v, lidar_range,
         range_distance_th, submap_update_dist;
     int delta_h, delta_v, frame_skip;
-    voxel_leaf_size = this->get_declare<double>(
+    voxel_leaf_size = this->declare_parameter<double>(
         "/moving_point_identification/voxel_leaf_size", 0.2);
-    fov_h = this->get_declare<double>("/moving_point_identification/fov_h_deg",
-                                      360.0);
+    fov_h = this->declare_parameter<double>(
+        "/moving_point_identification/fov_h_deg", 360.0);
     fov_h = (fov_h / 180.0) * M_PI;
-    fov_v = this->get_declare<double>("/moving_point_identification/fov_v_deg",
-                                      90.0);
+    fov_v = this->declare_parameter<double>(
+        "/moving_point_identification/fov_v_deg", 90.0);
     fov_v = (fov_v / 180.0) * M_PI;
-    res_h = this->get_declare<double>("/moving_point_identification/res_h_deg",
-                                      2.84444);
+    res_h = this->declare_parameter<double>(
+        "/moving_point_identification/res_h_deg", 2.84444);
     res_h = (res_h / 180.0) * M_PI;
-    res_v = this->get_declare<double>("/moving_point_identification/res_v_deg",
-                                      1.40625);
+    res_v = this->declare_parameter<double>(
+        "/moving_point_identification/res_v_deg", 1.40625);
     res_v = (res_v / 180.0) * M_PI;
-    lidar_range = this->get_declare<double>(
+    lidar_range = this->declare_parameter<double>(
         "/moving_point_identification/lidar_range", 100.0);
-    delta_h = this->get_declare<int>("/moving_point_identification/delta_h", 2);
-    delta_v = this->get_declare<int>("/moving_point_identification/delta_v", 1);
-    range_distance_th = this->get_declare<double>(
+    delta_h =
+        this->declare_parameter<int>("/moving_point_identification/delta_h", 2);
+    delta_v =
+        this->declare_parameter<int>("/moving_point_identification/delta_v", 1);
+    range_distance_th = this->declare_parameter<double>(
         "/moving_point_identification/threshold", 0.5);
-    frame_skip =
-        this->get_declare<int>("/moving_point_identification/frame_skip", 0);
-    submap_update_dist = this->get_declare<double>(
+    frame_skip = this->declare_parameter<int>(
+        "/moving_point_identification/frame_skip", 0);
+    submap_update_dist = this->declare_parameter<double>(
         "/moving_point_identification/submap_update_dist", 3.0);
 
     if (in_process_vis) {
       moving_point_identification_.reset(new MovingPointIdentification(
           voxel_leaf_size, res_h, res_v, fov_h, fov_v, lidar_range, delta_h,
           delta_v, range_distance_th, frame_skip, submap_update_dist,
-          pub_ptr_in_proc_vis_, frame_id_));
+          pub_ptr_in_proc_vis_, frame_id_, this));
     } else {
       moving_point_identification_.reset(new MovingPointIdentification(
           voxel_leaf_size, res_h, res_v, fov_h, fov_v, lidar_range, delta_h,
@@ -408,8 +417,7 @@ class MapCleaner : public rclcpp::Node {
   }
 
 public:
-  MapCleaner::MapCleaner(
-      const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+  MapCleaner(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
       : Node("map_cleaner", options) {
     initialize();
   }

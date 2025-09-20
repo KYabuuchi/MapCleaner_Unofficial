@@ -123,7 +123,8 @@ public:
 
   bool compute(grid_map::GridMap &grid) {
     if (!grid.exists(input_layer_name_)) {
-      RCLCPP_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
+      RCLCPP_ERROR_STREAM(rclcpp::get_logger("bgk_filter"),
+                          "GridMap Does Not Have The Required Layers.");
       return false;
     }
 
