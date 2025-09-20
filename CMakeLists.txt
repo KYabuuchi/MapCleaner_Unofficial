@@ -20,7 +20,7 @@ include_directories(
   include
 )
 
-add_library(patchworkpp STATIC
+ament_auto_add_library(patchworkpp STATIC
   thirdparty/patchworkpp/src/patchworkpp.cpp
 )
 

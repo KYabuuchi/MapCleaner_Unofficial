@@ -1,12 +1,11 @@
 #pragma once
 
-#include <ros/ros.h>
+#include <grid_map_msgs/msg/grid_map.hpp>
 #include <grid_map_ros/grid_map_ros.hpp>
-#include <grid_map_msgs/GridMap.h>
 #include <map_cleaner/utils.hpp>
+#include <rclcpp/rclcpp.hpp>
 
-class VarianceFilter
-{
+class VarianceFilter {
 public:
   typedef std::shared_ptr<VarianceFilter> Ptr;
   typedef std::shared_ptr<const VarianceFilter> ConstPtr;
@@ -19,12 +18,11 @@ private:
   std::string output_layer_name_;
 
 public:
-  VarianceFilter(const float variance_th, const int min_num, 
-                 const std::string in_count_layer = "count", 
-                 const std::string in_variance_layer = "variance", 
-                 const std::string in_elevation_layer = "average", 
-                 const std::string output_layer = "variance_filtered")
-  {
+  VarianceFilter(const float variance_th, const int min_num,
+                 const std::string in_count_layer = "count",
+                 const std::string in_variance_layer = "variance",
+                 const std::string in_elevation_layer = "average",
+                 const std::string output_layer = "variance_filtered") {
     variance_th_ = variance_th;
     min_num_ = min_num;
 
@@ -36,16 +34,15 @@ public:
     output_layer_name_ = output_layer;
   }
 
-  bool compute(grid_map::GridMap &grid)
-  {
-    if(!grid.exists(input_layer_names_[0]) &&
-       !grid.exists(input_layer_names_[1]) &&
-       !grid.exists(input_layer_names_[2])){
+  bool compute(grid_map::GridMap &grid) {
+    if (!grid.exists(input_layer_names_[0]) &&
+        !grid.exists(input_layer_names_[1]) &&
+        !grid.exists(input_layer_names_[2])) {
       ROS_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
       return false;
     }
 
-    if(grid.exists(output_layer_name_))
+    if (grid.exists(output_layer_name_))
       grid.clear(output_layer_name_);
     else
       grid.add(output_layer_name_);
@@ -55,13 +52,12 @@ public:
     grid_map::Matrix &elevation_layer = grid[input_layer_names_[2]];
     grid_map::Matrix &output_layer = grid[output_layer_name_];
 
-    for(grid_map::GridMapIterator it(grid); !it.isPastEnd(); ++it) {
+    for (grid_map::GridMapIterator it(grid); !it.isPastEnd(); ++it) {
       const size_t i = it.getLinearIndex();
       float count = count_layer(i);
       float variance = variance_layer(i);
       float elevation = elevation_layer(i);
-      if(count >= min_num_ && variance < variance_th_)
-      {
+      if (count >= min_num_ && variance < variance_th_) {
         output_layer(i) = elevation;
       }
     }
