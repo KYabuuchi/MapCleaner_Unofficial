@@ -38,7 +38,7 @@ public:
     if (!grid.exists(input_layer_names_[0]) &&
         !grid.exists(input_layer_names_[1]) &&
         !grid.exists(input_layer_names_[2])) {
-      ROS_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
+      RCLCPP_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
       return false;
     }
 

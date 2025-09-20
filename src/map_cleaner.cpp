@@ -14,16 +14,16 @@
 
 // #define PUBLISH_GRID_MAP
 
-class MapCleaner : public rclcpp::Node("map_cleaner", options) {
+class MapCleaner : public rclcpp::Node {
 
   std::string save_dir_;
 
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_ground_;
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_static_;
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_dynamic_;
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_ground_below_;
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_other_;
-  rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_terrain_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ground_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_static_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_dynamic_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ground_below_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_other_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_terrain_;
 
 #ifdef PUBLISH_GRID_MAP
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr pub_grid_map_;
@@ -58,7 +58,7 @@ class MapCleaner : public rclcpp::Node("map_cleaner", options) {
       *vis_cloud = *cloud;
     }
 
-    sensor_msgs::PointCloud2 cloud_msg;
+    sensor_msgs::msg::PointCloud2 cloud_msg;
     pcl::toROSMsg(*vis_cloud, cloud_msg);
     cloud_msg.header.frame_id = frame_id;
     pub->publish(cloud_msg);
@@ -149,26 +149,28 @@ class MapCleaner : public rclcpp::Node("map_cleaner", options) {
 
     rclcpp::QoS qos = rclcpp::KeepLast(1).transientLocal();
 
-    pub_ground_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("ground_cloud", qos);
-    pub_static_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("static_cloud", qos);
-    pub_dynamic_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("dynamic_cloud", qos);
-    pub_ground_below_ = this->create_publisher<sensor_msgs::PointCloud2>(
+    pub_ground_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "ground_cloud", qos);
+    pub_static_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "static_cloud", qos);
+    pub_dynamic_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "dynamic_cloud", qos);
+    pub_ground_below_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "ground_below_cloud", qos);
-    pub_other_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("other_cloud", qos);
-    pub_terrain_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("terrain_cloud", qos);
+    pub_other_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "other_cloud", qos);
+    pub_terrain_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "terrain_cloud", qos);
 #ifdef PUBLISH_GRID_MAP
     pub_grid_map_ =
-        this->create_publisher<grid_map_msgs::GridMap>("grid_map", qos);
+        this->create_publisher<grid_map_msgs::msg::GridMap>("grid_map", qos);
 #endif
 
-    rclcpp::Publisher<sensor_msgs::PointCloud2>::SharedPtr pub_ptr_in_proc_vis_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+        pub_ptr_in_proc_vis_;
     pub_ptr_in_proc_vis_ =
-        this->create_publisher<sensor_msgs::PointCloud2>("in_process", qos);
+        this->create_publisher<sensor_msgs::msg::PointCloud2>("in_process",
+                                                              qos);
 
     frame_id_ =
         this->declare_parameter<std::string>("/map_cleaner/frame_id", "map");
@@ -191,15 +193,17 @@ class MapCleaner : public rclcpp::Node("map_cleaner", options) {
     // Loader
     std::string pcds_dir, pose_file, calibration_file, format;
     int start, end;
-    nh_.param<std::string>("/loader/pcds_dir", pcds_dir, "/tmp/pcds");
+    pcds_dir =
+        this->declare_parameter<std::string>("/loader/pcds_dir", "/tmp/pcds");
     if (pcds_dir.back() != '/')
       pcds_dir += '/';
-    nh_.param<std::string>("/loader/pose_file", pose_file, "/tmp/poses.csv");
-    nh_.param<std::string>("/loader/kitti_calibration_file", calibration_file,
-                           "/tmp/calib.txt");
-    nh_.param<int>("/loader/start", start, 0);
-    nh_.param<int>("/loader/end", end, -1);
-    nh_.param<std::string>("/loader/format", format, "erasor");
+    pose_file = this->declare_parameter<std::string>("/loader/pose_file",
+                                                     "/tmp/poses.csv");
+    calibration_file = this->declare_parameter<std::string>(
+        "/loader/kitti_calibration_file", "/tmp/calib.txt");
+    start = this->declare_parameter<int>("/loader/start", 0);
+    end = this->declare_parameter<int>("/loader/end", -1);
+    format = this->declare_parameter<std::string>("/loader/format", "erasor");
 
     if (format == "kitti") {
       loader_.reset(new KittiFormatLoader());
@@ -213,7 +217,8 @@ class MapCleaner : public rclcpp::Node("map_cleaner", options) {
       loader_.reset(new ERASORFormatLoader());
       loader_->loadFrameInfo(pcds_dir, pose_file, start, end);
     }
-    ROS_INFO_STREAM("Loaded Frames: " << loader_->getSize());
+    RCLCPP_INFO_STREAM(this->get_logger(),
+                       "Loaded Frames: " << loader_->getSize());
 
     if (loader_->getSize() == 0)
       exit(1);
@@ -397,14 +402,15 @@ class MapCleaner : public rclcpp::Node("map_cleaner", options) {
           delta_v, range_distance_th, frame_skip, submap_update_dist));
     }
 
-    ROS_INFO_STREAM("pcds_dir: " << pcds_dir);
-    ROS_INFO_STREAM("pose_file: " << pose_file);
-    ROS_INFO_STREAM("save_dir: " << save_dir_);
+    RCLCPP_INFO_STREAM(this->get_logger(), "pcds_dir: " << pcds_dir);
+    RCLCPP_INFO_STREAM(this->get_logger(), "pose_file: " << pose_file);
+    RCLCPP_INFO_STREAM(this->get_logger(), "save_dir: " << save_dir_);
   }
 
 public:
   MapCleaner::MapCleaner(
-      const rclcpp::NodeOptions &options = rclcpp::NodeOptions()) {
+      const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+      : Node("map_cleaner", options) {
     initialize();
   }
 
@@ -414,41 +420,41 @@ public:
     PIndices::Ptr nonground_indices(new PIndices);
     ground_seg_->compute(loader_, *cloud, *initial_ground_indices,
                          *nonground_indices);
-    ROS_INFO_STREAM("Finished: GroundSegmentation");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: GroundSegmentation");
 
     grid_map::GridMapPtr grid_map_ptr =
         grid_map_builder_->compute(*cloud, *initial_ground_indices);
     if (grid_map_ptr == nullptr) {
-      ROS_ERROR_STREAM("Failed: ground_cloud is empty.");
+      RCLCPP_ERROR_STREAM(this->get_logger(), "Failed: ground_cloud is empty.");
       return;
     }
-    ROS_INFO_STREAM("Finished: GridMapBuilder");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: GridMapBuilder");
 
     if (!variance_filter_->compute(*grid_map_ptr)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: VarianceFilter");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: VarianceFilter");
 
     if (!first_bgk_filter_->compute(*grid_map_ptr)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: First BGKFilter");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: First BGKFilter");
 
     if (!trajectory_filter_->compute(*grid_map_ptr, loader_)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: TrajectoryFilter");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: TrajectoryFilter");
 
     if (!second_bgk_filter_->compute(*grid_map_ptr)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: Second BGKFilter");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Second BGKFilter");
 
     if (median_filter_ != nullptr) {
       if (!median_filter_->compute(*grid_map_ptr)) {
         return;
       }
-      ROS_INFO_STREAM("Finished: MedianFilter");
+      RCLCPP_INFO_STREAM(this->get_logger(), "Finished: MedianFilter");
     } else {
       grid_map_ptr->add("elevation", (*grid_map_ptr)["second_bgk_filtered"]);
       grid_map_ptr->erase("second_bgk_filtered");
@@ -472,7 +478,7 @@ public:
                                      *ground_below_indices, *other_indices)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: Divide By Terrain");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Divide By Terrain");
     initial_ground_indices->indices.clear(); // release memory
     initial_ground_indices->indices.shrink_to_fit();
     nonground_indices->indices.clear();
@@ -485,7 +491,8 @@ public:
             *dynamic_indices)) {
       return;
     }
-    ROS_INFO_STREAM("Finished: Moving Point Identification");
+    RCLCPP_INFO_STREAM(this->get_logger(),
+                       "Finished: Moving Point Identification");
 
     publishCloud(cloud, ground_indices, frame_id_, pub_ground_);
     publishCloud(cloud, static_indices, frame_id_, pub_static_);
@@ -500,7 +507,7 @@ public:
     saveCloud(save_dir_ + "ground.pcd", *cloud, ground_indices);
     saveCloud(save_dir_ + "other.pcd", *cloud, other_indices);
 
-    ROS_INFO_STREAM("Finished: Save Cloud");
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Save Cloud");
   }
 };
 
@@ -509,7 +516,7 @@ int main(int argc, char **argv) {
   rclcpp::init(argc, argv);
   auto map_cleaner = std::make_shared<MapCleaner>();
 
-  rclcpp::spin(gmap_cleaner);
+  rclcpp::spin(map_cleaner);
   rclcpp::shutdown();
 
   return 0;

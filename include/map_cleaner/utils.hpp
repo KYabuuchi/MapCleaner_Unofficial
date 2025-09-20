@@ -12,7 +12,8 @@
 
 typedef pcl::PointXYZI PointType;
 typedef pcl::PointCloud<PointType> CloudType;
-typedef std::shared_ptr<ros::Publisher> PublisherPtr;
+typedef rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+    PublisherPtr;
 typedef pcl::PointIndices PIndices;
 
 namespace grid_map {

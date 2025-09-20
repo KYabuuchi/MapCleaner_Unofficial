@@ -54,7 +54,7 @@ public:
                PIndices &out_above_indices, PIndices &out_below_indices,
                PIndices &out_other_indices) {
     if (!grid.exists(input_layer_name_)) {
-      ROS_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
+      RCLCPP_ERROR_STREAM("GridMap Does Not Have The Required Layers.");
       return false;
     }
 

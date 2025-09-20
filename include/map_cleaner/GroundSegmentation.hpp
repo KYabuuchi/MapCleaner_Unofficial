@@ -151,7 +151,7 @@ public:
         continue;
 
       if (frame.frame->empty()) {
-        ROS_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
+        RCLCPP_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
         continue;
       }
 
@@ -179,7 +179,7 @@ public:
       if ((int64_t)cloud.size() + (int64_t)ground_frame->size() +
               (int64_t)nonground_frame->size() >
           INT32_MAX) {
-        ROS_ERROR_STREAM("Over INT32_MAX");
+        RCLCPP_ERROR_STREAM("Over INT32_MAX");
         return false;
       }
 
@@ -195,8 +195,9 @@ public:
       publish(frame, *ground_frame, *nonground_frame);
 
       if (i % 100 == 0) {
-        ROS_INFO_STREAM("Compute PatchWorkpp: " << i + 1 << " / "
-                                                << loader->getSize());
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("ground_segmentation"),
+                           "Compute PatchWorkpp: " << i + 1 << " / "
+                                                   << loader->getSize());
       }
     }
 
@@ -204,8 +205,9 @@ public:
     dummy_frame.t = loader->getFrameInfo(loader->getSize() - 1).t;
     dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
     publish(dummy_frame, CloudType(), CloudType()); // dummy
-    ROS_INFO_STREAM("Compute PatchWorkpp: " << loader->getSize() << " / "
-                                            << loader->getSize());
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("ground_segmentation"),
+                       "Compute PatchWorkpp: " << loader->getSize() << " / "
+                                               << loader->getSize());
 
     cloud.points.shrink_to_fit();
     ground_indices.indices.shrink_to_fit();

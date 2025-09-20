@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 project(map_cleaner)
 
-add_compile_options(-std=c++14 -O3)
+# add_compile_options(-std=c++14 -O3)
+set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/mod_pcl")
 

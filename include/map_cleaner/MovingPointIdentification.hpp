@@ -324,7 +324,7 @@ public:
       // auto st = ros::WallTime::now();
       DataLoaderBase::Frame frame = loader->loadFrame(i);
       if (frame.frame->empty()) {
-        ROS_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
+        RCLCPP_WARN_STREAM("Frame " << frame.idx + 1 << " is empty.");
         continue;
       }
       // std::cout << "load: " << (ros::WallTime::now() - st).toSec() << " sec"
@@ -362,8 +362,9 @@ public:
               vote_list_dynamic);
 
       if (i % 100 == 0) {
-        ROS_INFO_STREAM("Compute Moving Point Identification: "
-                        << i + 1 << " / " << loader->getSize());
+        RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
+                           "Compute Moving Point Identification: "
+                               << i + 1 << " / " << loader->getSize());
       }
     }
 
@@ -372,8 +373,9 @@ public:
     dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
     publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
             vote_list_dynamic); // dummy
-    ROS_INFO_STREAM("Compute Moving Point Identification: "
-                    << loader->getSize() << " / " << loader->getSize());
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
+                       "Compute Moving Point Identification: "
+                           << loader->getSize() << " / " << loader->getSize());
 
     static_indices.indices.clear();
     dynamic_indices.indices.clear();
