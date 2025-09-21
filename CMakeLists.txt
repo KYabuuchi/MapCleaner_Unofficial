@@ -4,13 +4,15 @@ project(map_cleaner)
 # add_compile_options(-std=c++14 -O3)
 set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/mod_pcl")
-
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
+find_package(PCL REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(Eigen3 REQUIRED)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/mod_pcl")
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 

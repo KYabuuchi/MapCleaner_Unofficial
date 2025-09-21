@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.22)
 
 find_package(PCL REQUIRED)
 
-add_library(voxel_grid_large STATIC src/voxel_grid_large.cpp)
+ament_auto_add_library(voxel_grid_large SHARED src/voxel_grid_large.cpp)
 target_include_directories(voxel_grid_large PUBLIC ${PCL_INCLUDE_DIRS} include)
 target_link_libraries(voxel_grid_large ${PCL_LIBRARIES})
 

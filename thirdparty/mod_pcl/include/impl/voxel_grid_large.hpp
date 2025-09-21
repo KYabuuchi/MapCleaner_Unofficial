@@ -74,8 +74,11 @@ pcl::VoxelGridLarge<PointT>::applyFilter (PointCloud &output)
 
   Eigen::Vector4f min_p, max_p;
   // Get the minimum and maximum dimensions
-  if (!filter_field_name_.empty ()) // If we don't want to process the entire cloud...
-    getMinMax3D<PointT> (input_, *indices_, filter_field_name_, static_cast<float> (filter_limit_min_), static_cast<float> (filter_limit_max_), min_p, max_p, filter_limit_negative_);
+  if (!filter_field_name_.empty ()){ // If we don't want to process the entire cloud...
+    // getMinMax3D<PointT> (input_, *indices_, filter_field_name_, static_cast<float> (filter_limit_min_), static_cast<float> (filter_limit_max_), min_p, max_p, filter_limit_negative_);
+    PCL_WARN ("[pcl::%s::applyFilter] filter_field_name is no supported. So using the entire cloud instead.\n", getClassName ().c_str ());
+    getMinMax3D<PointT> (*input_, *indices_, min_p, max_p);
+  }
   else
     getMinMax3D<PointT> (*input_, *indices_, min_p, max_p);
 
