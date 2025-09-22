@@ -375,8 +375,10 @@ public:
     DataLoaderBase::Frame dummy_frame;
     dummy_frame.t = loader->getFrameInfo(loader->getSize() - 1).t;
     dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
-    publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
-            vote_list_dynamic); // dummy
+    // TODO: This causes `[ros2run]: Floating point exception`
+    // publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
+    //         vote_list_dynamic); // dummy
+
     RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
                        "Compute Moving Point Identification: "
                            << loader->getSize() << " / " << loader->getSize());
@@ -395,6 +397,8 @@ public:
       }
     }
 
+    RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
+                       "Finish Moving Point Identification");
     static_indices.indices.shrink_to_fit();
     dynamic_indices.indices.shrink_to_fit();
 

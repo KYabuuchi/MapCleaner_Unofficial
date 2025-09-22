@@ -182,28 +182,29 @@ class MapCleaner : public rclcpp::Node {
     }
 
     float vis_vg_res;
-    vis_vg_res = this->declare_parameter<float>(
-        "/map_cleaner/visualization_vg_res", 0.8);
+    vis_vg_res =
+        this->declare_parameter<float>("map_cleaner.visualization_vg_res", 0.8);
     vis_vg_.setLeafSize(vis_vg_res, vis_vg_res, vis_vg_res);
 
     bool in_process_vis;
     in_process_vis = this->declare_parameter<bool>(
-        "/map_cleaner/in_process_visualization", true);
+        "map_cleaner.in_process_visualization", true);
 
     // Loader
     std::string pcds_dir, pose_file, calibration_file, format;
     int start, end;
     pcds_dir =
-        this->declare_parameter<std::string>("/loader/pcds_dir", "/tmp/pcds");
+        this->declare_parameter<std::string>("loader.pcds_dir", "/tmp/pcds");
+    RCLCPP_INFO(this->get_logger(), "PCDs Dir: %s", pcds_dir.c_str());
     if (pcds_dir.back() != '/')
       pcds_dir += '/';
-    pose_file = this->declare_parameter<std::string>("/loader/pose_file",
+    pose_file = this->declare_parameter<std::string>("loader.pose_file",
                                                      "/tmp/poses.csv");
     calibration_file = this->declare_parameter<std::string>(
-        "/loader/kitti_calibration_file", "/tmp/calib.txt");
-    start = this->declare_parameter<int>("/loader/start", 0);
-    end = this->declare_parameter<int>("/loader/end", -1);
-    format = this->declare_parameter<std::string>("/loader/format", "erasor");
+        "loader.kitti_calibration_file", "/tmp/calib.txt");
+    start = this->declare_parameter<int>("loader.start", 0);
+    end = this->declare_parameter<int>("loader.end", -1);
+    format = this->declare_parameter<std::string>("loader.format", "erasor");
 
     if (format == "kitti") {
       loader_.reset(new KittiFormatLoader());
@@ -228,70 +229,70 @@ class MapCleaner : public rclcpp::Node {
     float seg_voxel_leaf_size;
     int seg_frame_skip;
     use_voxel_grid = this->declare_parameter<bool>(
-        "/ground_segmentation/use_voxel_grid", false);
+        "ground_segmentation.use_voxel_grid", false);
     seg_voxel_leaf_size = this->declare_parameter<float>(
-        "/ground_segmentation/voxel_leaf_size", 0.1);
+        "ground_segmentation.voxel_leaf_size", 0.1);
     seg_frame_skip =
-        this->declare_parameter<int>("/ground_segmentation/frame_skip", 0);
+        this->declare_parameter<int>("ground_segmentation.frame_skip", 0);
 
     patchwork::Params patchwork_params;
     patchwork_params.verbose =
-        this->declare_parameter<bool>("/patchworkpp/verbose", false);
+        this->declare_parameter<bool>("patchworkpp.verbose", false);
     patchwork_params.enable_RNR =
-        this->declare_parameter<bool>("/patchworkpp/enable_rnr", true);
+        this->declare_parameter<bool>("patchworkpp.enable_rnr", true);
     patchwork_params.enable_RVPF =
-        this->declare_parameter<bool>("/patchworkpp/enable_rvpf", true);
+        this->declare_parameter<bool>("patchworkpp.enable_rvpf", true);
     patchwork_params.enable_TGR =
-        this->declare_parameter<bool>("/patchworkpp/enable_tgr", true);
+        this->declare_parameter<bool>("patchworkpp.enable_tgr", true);
     patchwork_params.num_iter =
-        this->declare_parameter<int>("/patchworkpp/num_iter", 3);
+        this->declare_parameter<int>("patchworkpp.num_iter", 3);
     patchwork_params.num_lpr =
-        this->declare_parameter<int>("/patchworkpp/num_lpr", 20);
+        this->declare_parameter<int>("patchworkpp.num_lpr", 20);
     patchwork_params.num_min_pts =
-        this->declare_parameter<int>("/patchworkpp/num_min_pts", 10);
+        this->declare_parameter<int>("patchworkpp.num_min_pts", 10);
     patchwork_params.num_zones =
-        this->declare_parameter<int>("/patchworkpp/num_zones", 4);
+        this->declare_parameter<int>("patchworkpp.num_zones", 4);
     patchwork_params.num_rings_of_interest =
-        this->declare_parameter<int>("/patchworkpp/num_rings_of_interest", 4);
-    patchwork_params.RNR_ver_angle_thr = this->declare_parameter<double>(
-        "/patchworkpp/rnr_ver_angle_thr", -15.0);
+        this->declare_parameter<int>("patchworkpp.num_rings_of_interest", 4);
+    patchwork_params.RNR_ver_angle_thr =
+        this->declare_parameter<double>("patchworkpp.rnr_ver_angle_thr", -15.0);
     patchwork_params.RNR_intensity_thr =
-        this->declare_parameter<double>("/patchworkpp/rnr_intensity_thr", 0.2);
+        this->declare_parameter<double>("patchworkpp.rnr_intensity_thr", 0.2);
     patchwork_params.sensor_height =
-        this->declare_parameter<double>("/patchworkpp/sensor_height", 1.723);
+        this->declare_parameter<double>("patchworkpp.sensor_height", 1.723);
     patchwork_params.th_seeds =
-        this->declare_parameter<double>("/patchworkpp/th_seeds", 0.125);
+        this->declare_parameter<double>("patchworkpp.th_seeds", 0.125);
     patchwork_params.th_dist =
-        this->declare_parameter<double>("/patchworkpp/th_dist", 0.125);
+        this->declare_parameter<double>("patchworkpp.th_dist", 0.125);
     patchwork_params.th_seeds_v =
-        this->declare_parameter<double>("/patchworkpp/th_seeds_v", 0.25);
+        this->declare_parameter<double>("patchworkpp.th_seeds_v", 0.25);
     patchwork_params.th_dist_v =
-        this->declare_parameter<double>("/patchworkpp/th_dist_v", 0.1);
+        this->declare_parameter<double>("patchworkpp.th_dist_v", 0.1);
     patchwork_params.max_range =
-        this->declare_parameter<double>("/patchworkpp/max_range", 80.0);
+        this->declare_parameter<double>("patchworkpp.max_range", 80.0);
     patchwork_params.min_range =
-        this->declare_parameter<double>("/patchworkpp/min_range", 2.7);
+        this->declare_parameter<double>("patchworkpp.min_range", 2.7);
     patchwork_params.uprightness_thr =
-        this->declare_parameter<double>("/patchworkpp/uprightness_thr", 0.707);
+        this->declare_parameter<double>("patchworkpp.uprightness_thr", 0.707);
     patchwork_params.adaptive_seed_selection_margin =
         this->declare_parameter<double>(
-            "/patchworkpp/adaptive_seed_selection_margin", -1.2);
+            "patchworkpp.adaptive_seed_selection_margin", -1.2);
     patchwork_params.num_sectors_each_zone =
         this->declare_parameter<std::vector<long>>(
-            "/patchworkpp/num_sectors_each_zone", {16, 32, 54, 32});
+            "patchworkpp.num_sectors_each_zone", {16, 32, 54, 32});
     patchwork_params.num_rings_each_zone =
         this->declare_parameter<std::vector<long>>(
-            "/patchworkpp/num_rings_each_zone", {2, 4, 4, 4});
+            "patchworkpp.num_rings_each_zone", {2, 4, 4, 4});
     patchwork_params.max_flatness_storage =
-        this->declare_parameter<int>("/patchworkpp/max_flatness_storage", 1000);
-    patchwork_params.max_elevation_storage = this->declare_parameter<int>(
-        "/patchworkpp/max_elevation_storage", 1000);
+        this->declare_parameter<int>("patchworkpp.max_flatness_storage", 1000);
+    patchwork_params.max_elevation_storage =
+        this->declare_parameter<int>("patchworkpp.max_elevation_storage", 1000);
     patchwork_params.elevation_thr =
         this->declare_parameter<std::vector<double>>(
-            "/patchworkpp/elevation_thr", {0.0, 0.0, 0.0, 0.0});
+            "patchworkpp.elevation_thr", {0.0, 0.0, 0.0, 0.0});
     patchwork_params.flatness_thr =
-        this->declare_parameter<std::vector<double>>(
-            "/patchworkpp/flatness_thr", {0.0, 0.0, 0.0, 0.0});
+        this->declare_parameter<std::vector<double>>("patchworkpp.flatness_thr",
+                                                     {0.0, 0.0, 0.0, 0.0});
     if (in_process_vis)
       ground_seg_.reset(new GroundSegmentation(
           patchwork_params, use_voxel_grid, seg_voxel_leaf_size, seg_frame_skip,
@@ -303,8 +304,9 @@ class MapCleaner : public rclcpp::Node {
 
     // GridMapBuilder
     resolution_ =
-        this->declare_parameter<float>("/grid_map_builder/grid_res", 0.1);
+        this->declare_parameter<float>("grid_map_builder.grid_res", 0.1);
     grid_map_builder_.reset(new GridMapBuilder(resolution_, frame_id_));
+    RCLCPP_INFO_STREAM(this->get_logger(), "GridMapBuilder: initialized ");
 
     // VarianceFilter
     float variance_th;
@@ -326,6 +328,7 @@ class MapCleaner : public rclcpp::Node {
     first_bgk_filter_.reset(
         new BGKFilter(bgk1_kernel_radius, bgk1_lambda, bgk1_sigma, bgk1_min_num,
                       "variance_filtered", "first_bgk_filtered"));
+    RCLCPP_INFO_STREAM(this->get_logger(), "First BGKFilter: initialized ");
 
     // TrajectoryFilter
     double normal_th_deg;
@@ -334,6 +337,7 @@ class MapCleaner : public rclcpp::Node {
     trajectory_filter_.reset(
         new TrajectoryFilter((normal_th_deg / 180.0) * M_PI,
                              "first_bgk_filtered", "trajectory_filtered"));
+    RCLCPP_INFO_STREAM(this->get_logger(), "TrajectoryFilter: initialized ");
 
     // Second BGKFilter
     double bgk2_kernel_radius, bgk2_lambda, bgk2_sigma;
@@ -420,6 +424,7 @@ public:
   MapCleaner(const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
       : Node("map_cleaner", options) {
     initialize();
+    exec();
   }
 
   void exec() {
