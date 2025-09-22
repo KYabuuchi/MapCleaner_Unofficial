@@ -1,6 +1,5 @@
 /**:
   ros__parameters:
-    /loader/pcds_dir: "/tmp/dump/frames"
     loader:
       pcds_dir: "/tmp/dump/frames"
       pose_file: "/tmp/dump/traj_lidar.txt"

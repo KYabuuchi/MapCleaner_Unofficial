@@ -38,4 +38,8 @@ target_link_libraries(${PROJECT_NAME}
   patchworkpp
 )
 
-ament_auto_package()
+ament_auto_package(INSTALL_TO_SHARE
+  rviz
+  config
+  launch
+)

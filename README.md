@@ -1,4 +1,4 @@
-# MapCleaner Unofficial
+# MapCleaner Unofficial (ROS 2)
 - This repository is an unofficial implementation of "[MapCleaner](https://www.mdpi.com/2072-4292/14/18/4496)", a method for removing moving objects from point cloud maps.
 - Please note that I created this software as a hobby and there is no guarantee that the contents of the paper are accurately implemented.
 
@@ -30,20 +30,18 @@
 - Please refer to the [README](./docker/README.md) in the docker directory for how to use the Docker environment.
 
 ### Env
-- Ubuntu 20.04 LTS
-- ROS Noetic
+- Ubuntu 22.04 LTS
+- ROS 2 Humble
 
 ### How to build
-- Dependencies
-```
-sudo apt install ros-noetic-grid-map ros-noetic-pcl-ros
-```
 - Build
 ```
-mkdir -p catkin_ws/src
-cd catkin_ws/src
+mkdir -p colcon_ws/src
+cd colcon_ws/src
 git clone "this repo" src
-catkin_make
+rosdep update
+rosdep install -y --from-paths src --ignore-src --rosdistro $ROS_DISTRO
+colcon build
 ```
 
 ### How to use
