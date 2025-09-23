@@ -1,0 +1,10 @@
+<launch>
+    <arg name="config" default="$(find-pkg-share map_cleaner)/config/config.yaml" />
+
+    <node name="map_cleaner" pkg="map_cleaner" exec="map_cleaner" output="screen">
+        <param from="$(var config)" />
+    </node>
+
+    <!-- Run Rviz -->
+    <node name="rviz2" pkg="rviz2" exec="rviz2" args="-d $(find-pkg-share map_cleaner)/rviz/rviz.rviz" />
+</launch>

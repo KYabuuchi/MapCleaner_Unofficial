@@ -1,8 +1,0 @@
-<launch>
-    <args name="config" default="$(find map_cleaner)/config/config.yaml" />
-    <rosparam file="$(arg config)" command="load" />
-    <node name="map_cleaner" pkg="map_cleaner" type="map_cleaner" output="screen" />
-
-    <!-- Run Rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find map_cleaner)/rviz/rviz.rviz" />
-</launch>
