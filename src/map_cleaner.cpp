@@ -428,6 +428,9 @@ public:
   }
 
   void exec() {
+
+    // (1) Divide Point Cloud into Ground and Non-ground
+    // (1-1) Ground Segmentation
     CloudType::Ptr cloud(new CloudType);
     PIndices::Ptr initial_ground_indices(new PIndices);
     PIndices::Ptr nonground_indices(new PIndices);
@@ -435,6 +438,7 @@ public:
                          *nonground_indices);
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: GroundSegmentation");
 
+    // (1-2) Grid Map Based Terrain Extraction
     grid_map::GridMapPtr grid_map_ptr =
         grid_map_builder_->compute(*cloud, *initial_ground_indices);
     if (grid_map_ptr == nullptr) {
@@ -443,26 +447,31 @@ public:
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: GridMapBuilder");
 
+    // (1-3) Grid Map Filtering
     if (!variance_filter_->compute(*grid_map_ptr)) {
       return;
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: VarianceFilter");
 
+    // (1-4) first BGK Filtering
     if (!first_bgk_filter_->compute(*grid_map_ptr)) {
       return;
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: First BGKFilter");
 
+    // (1-5) Trajectory Filtering
     if (!trajectory_filter_->compute(*grid_map_ptr, loader_)) {
       return;
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: TrajectoryFilter");
 
+    // (1-6) second BGK Filtering
     if (!second_bgk_filter_->compute(*grid_map_ptr)) {
       return;
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Second BGKFilter");
 
+    // (1-7) Median Filtering if enabled
     if (median_filter_ != nullptr) {
       if (!median_filter_->compute(*grid_map_ptr)) {
         return;
@@ -477,10 +486,13 @@ public:
     publishGridMap(*grid_map_ptr, {"elevation", "intensity"}, pub_grid_map_);
 #endif
 
+    // (1-8) Publish Terrain Cloud
     CloudType::Ptr terrain_pcd =
         gridMap2Cloud(*grid_map_ptr, "elevation", "intensity");
     publishCloud(terrain_pcd, nullptr, frame_id_, pub_terrain_);
 
+    // (2) Divide Point Cloud into Static and Dynamic
+    // (2-1) Extract Non-ground Points on Terrain
     PIndices::Ptr ground_indices(new PIndices);
     PIndices::Ptr ground_above_indices(new PIndices);
     PIndices::Ptr ground_below_indices(new PIndices);
@@ -497,6 +509,7 @@ public:
     nonground_indices->indices.clear();
     nonground_indices->indices.shrink_to_fit();
 
+    // (2-2) Moving Point Identification
     PIndices::Ptr static_indices(new PIndices);
     PIndices::Ptr dynamic_indices(new PIndices);
     if (!moving_point_identification_->compute(
@@ -507,6 +520,7 @@ public:
     RCLCPP_INFO_STREAM(this->get_logger(),
                        "Finished: Moving Point Identification");
 
+    // (3) Publish and Save Results
     publishCloud(cloud, ground_indices, frame_id_, pub_ground_);
     publishCloud(cloud, static_indices, frame_id_, pub_static_);
     publishCloud(cloud, dynamic_indices, frame_id_, pub_dynamic_);
