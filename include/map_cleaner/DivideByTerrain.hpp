@@ -14,6 +14,7 @@ private:
   std::string input_layer_name_;
   double threshold_;
   bool on_terrain_only_;
+  const double height_threshold_;
 
   void divide(const CloudType &cloud, const PIndices &input_indices,
               const grid_map::GridMap &grid, PIndices &ground, PIndices &above,
@@ -42,8 +43,8 @@ private:
           below.indices.push_back(p_idx);
         } else if (diff_z < threshold_) {
           ground.indices.push_back(p_idx);
-        } else if (diff_z <= 3.0) {
-          // TODO: 3.0[m] is the maximum height of moving objects
+        } else if (diff_z <= height_threshold_) {
+          // height_threshold_ is the maximum height of moving objects
           above.indices.push_back(p_idx);
         } else {
           other.indices.push_back(p_idx);
@@ -54,7 +55,9 @@ private:
 
 public:
   DivideByTerrain(const double threshold, bool on_terrain_only,
-                  const std::string &input_layer = "elevation") {
+                  double height_threshold,
+                  const std::string &input_layer = "elevation")
+      : height_threshold_(height_threshold) {
     threshold_ = threshold;
     on_terrain_only_ = on_terrain_only;
     input_layer_name_ = input_layer;
@@ -79,13 +82,15 @@ public:
     if (on_terrain_only_) {
       divide(cloud, in_ground_indices, grid, out_ground_indices,
              out_above_indices, out_below_indices, out_other_indices);
+
       divide(cloud, in_nonground_indices, grid, out_ground_indices,
              out_above_indices, out_below_indices, out_other_indices);
     } else {
       divide(cloud, in_ground_indices, grid, out_ground_indices,
-             out_above_indices, out_below_indices, out_ground_indices);
+             out_above_indices, out_below_indices,
+             /* only difference */ out_ground_indices);
       divide(cloud, in_nonground_indices, grid, out_ground_indices,
-             out_above_indices, out_below_indices, out_above_indices);
+             out_above_indices, out_below_indices, out_other_indices);
     }
 
     out_ground_indices.indices.shrink_to_fit();

@@ -17,6 +17,8 @@ MovingPointIdentification::buildRangeImage(const CloudType &input) {
   range_im->add(layer_name_);
 
   grid_map::Matrix &layer = (*range_im)[layer_name_];
+  layer.setConstant(std::numeric_limits<float>::quiet_NaN());
+
   for (int i = 0; i < input.size(); i++) {
     const PointType &p = input[i];
     if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
@@ -143,51 +145,68 @@ void MovingPointIdentification::compareSubmapAndScan(
   }
 }
 
+grid_map::GridMapPtr global_range_im;
+
 void MovingPointIdentification::publish(
     const DataLoaderBase::Frame &frame, const CloudType::ConstPtr &input,
     const std::vector<int> &indices, const std::vector<int> &vote_list_static,
     const std::vector<int> &vote_list_dynamic) {
+
   if (pub_ptr_ == nullptr)
     return;
 
   pcl::PointCloud<pcl::PointXYZRGB> vis_cloud;
   vis_cloud.reserve(indices.size() + frame.frame->size());
 
-  CloudType transformed_cloud;
-  pcl::transformPointCloud(*frame.frame, transformed_cloud,
-                           Eigen::Translation3f(frame.t) * frame.r.matrix());
-  for (int i = 0; i < transformed_cloud.size(); i++) {
+  grid_map::Matrix &layer = (*global_range_im)[layer_name_];
+
+  auto inverseRangeImageCoordinate =
+      [this](const PointType &p, const float range) -> pcl::PointXYZRGB {
+    pcl::PointXYZRGB out;
+    float tmp_range, pos_h, pos_v;
+    this->getRangeImageCoordinate(p, tmp_range, pos_h, pos_v);
+    out.x =
+        std::cos(pos_h / res_h_scale_) * std::cos(pos_v / res_v_scale_) * range;
+    out.y =
+        std::sin(pos_h / res_h_scale_) * std::cos(pos_v / res_v_scale_) * range;
+    out.z = std::sin(pos_v / res_v_scale_) * range;
+    out.r = 255;
+    out.g = 255;
+    out.b = 255;
+    return out;
+  };
+
+  // Publish raw lidar points (magenta) and range image (white)
+  for (int i = 0; i < frame.frame->size(); i++) {
+    const PointType &p = frame.frame->at(i);
+    if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z)) {
+      continue;
+    }
     pcl::PointXYZRGB vis_p;
-    const PointType &p = transformed_cloud[i];
     vis_p.x = p.x;
     vis_p.y = p.y;
     vis_p.z = p.z;
-    vis_p.r = 200;
-    vis_p.g = 200;
-    vis_p.b = 200;
-
+    vis_p.r = 255;
+    vis_p.g = 0;
+    vis_p.b = 255;
     vis_cloud.push_back(vis_p);
-  }
 
-  for (int i = 0; i < indices.size(); i++) {
-    int idx = indices[i];
-    pcl::PointXYZRGB vis_p;
-    const PointType &p = input->points[idx];
-    vis_p.x = p.x;
-    vis_p.y = p.y;
-    vis_p.z = p.z;
+    float range, pos_h, pos_v;
+    getRangeImageCoordinate(p, range, pos_h, pos_v);
 
-    if (vote_list_dynamic[idx] <= vote_list_static[idx]) {
-      vis_p.r = 0;
-      vis_p.g = 255;
-      vis_p.b = 255;
-    } else {
-      vis_p.r = 255;
-      vis_p.g = 0;
-      vis_p.b = 0;
+    grid_map::Index idx;
+    if (!global_range_im->getIndex(grid_map::Position(pos_h, pos_v), idx)) {
+      RCLCPP_WARN_STREAM(rclcpp::get_logger("moving_point_identification"),
+                         "Cannot get index for visualization "
+                             << pos_h << ", " << pos_v << " p=" << p.x << ","
+                             << p.y << "," << p.z);
+      continue;
     }
 
-    vis_cloud.push_back(vis_p);
+    if (std::isfinite(layer(idx[0], idx[1]))) {
+      const float new_range = layer(idx[0], idx[1]);
+      vis_cloud.push_back(inverseRangeImageCoordinate(p, new_range));
+    }
   }
 
   sensor_msgs::msg::PointCloud2 cloud_msg;
@@ -195,19 +214,6 @@ void MovingPointIdentification::publish(
   cloud_msg.header.frame_id = frame_id_;
   cloud_msg.header.stamp = rclcpp::Clock().now();
   pub_ptr_->publish(cloud_msg);
-
-  geometry_msgs::msg::TransformStamped static_tf;
-  static_tf.header.stamp = rclcpp::Clock().now();
-  static_tf.header.frame_id = frame_id_;
-  static_tf.child_frame_id = "lidar";
-  static_tf.transform.translation.x = frame.t[0];
-  static_tf.transform.translation.y = frame.t[1];
-  static_tf.transform.translation.z = frame.t[2];
-  static_tf.transform.rotation.x = frame.r.x();
-  static_tf.transform.rotation.y = frame.r.y();
-  static_tf.transform.rotation.z = frame.r.z();
-  static_tf.transform.rotation.w = frame.r.w();
-  static_tf_br_->sendTransform(static_tf);
 }
 
 MovingPointIdentification::MovingPointIdentification(
@@ -246,6 +252,7 @@ MovingPointIdentification::MovingPointIdentification(
     res_v_scale_ = 1.0;
     range_im_res_ = res_v_;
   }
+
   lidar_range_sq_ = lidar_range * lidar_range;
   delta_h_ = delta_h;
   delta_v_ = delta_v;
@@ -300,18 +307,18 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
       continue;
     }
 
-    // (4-2) Skip for reduce computation time. If frame_skip_ = 1, it means the
-    // computation cost wil be halved.
+    // (4-2) Skip for reduce computation time. If frame_skip_ = 1, it means
+    // the computation cost wil be halved.
     if (i % (frame_skip_ + 1) != 0)
       continue;
 
     // (4-3) Build range image from the not-downsampled current scan
     grid_map::GridMapPtr range_im = buildRangeImage(*frame.frame);
 
-    // (4-4) Build submap based on the current pose when the accumulated motion
-    // exceeds a threshold.
-    // NOTE: The submap is the partial pointcloud of the downsampled whole map
-    // which is within lidar_range_ from the current lidar pose.
+    // (4-4) Build submap based on the current pose when the accumulated
+    // motion exceeds a threshold. NOTE: The submap is the partial pointcloud
+    // of the downsampled whole map which is within lidar_range_ from the
+    // current lidar pose.
     const Eigen::Affine3f lidar_pose =
         Eigen::Translation3f(frame.t) * frame.r.matrix();
     if (submap->empty() || (last_lidar_pose.translation() - frame.t).norm() >
@@ -329,6 +336,7 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
                          vote_list_static, vote_list_dynamic);
 
     if (i % 100 == 0) {
+      global_range_im = range_im;
       publish(frame, cloud_ds, submap_indices, vote_list_static,
               vote_list_dynamic);
 
@@ -336,15 +344,6 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
                          "Compute Moving Point Identification: "
                              << i + 1 << " / " << loader->getSize());
     }
-  }
-
-  {
-    // TODO: This causes `[ros2run]: Floating point exception`
-    // DataLoaderBase::Frame dummy_frame;
-    // dummy_frame.t = loader->getFrameInfo(loader->getSize() - 1).t;
-    // dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
-    // publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
-    //         vote_list_dynamic); // dummy
   }
 
   RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
@@ -356,6 +355,8 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
   dynamic_indices.indices.clear();
   for (int i = 0; i < cloud_ds->size(); i++) {
     PIndices *dst_indices;
+    // If both of static and dynamic votes are the same, it will be
+    // static.
     if (vote_list_dynamic[i] <= vote_list_static[i])
       dst_indices = &static_indices;
     else

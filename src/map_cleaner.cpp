@@ -362,8 +362,10 @@ class MapCleaner : public rclcpp::Node {
     on_terrain_only =
         this->declare_parameter<bool>("divide_by_terrain.on_terrain_only");
     terrain_th = this->declare_parameter<double>("divide_by_terrain.threshold");
-    divide_by_terrain_.reset(
-        new DivideByTerrain(terrain_th, on_terrain_only, "elevation"));
+    const double height_threshold =
+        this->declare_parameter<double>("divide_by_terrain.height_threshold");
+    divide_by_terrain_.reset(new DivideByTerrain(
+        terrain_th, on_terrain_only, height_threshold, "elevation"));
 
     // MovingObjectIdentification
     double voxel_leaf_size, fov_h, fov_v, res_h, res_v, lidar_range,
