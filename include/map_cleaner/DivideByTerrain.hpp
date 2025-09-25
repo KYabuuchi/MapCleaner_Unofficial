@@ -18,23 +18,35 @@ private:
   void divide(const CloudType &cloud, const PIndices &input_indices,
               const grid_map::GridMap &grid, PIndices &ground, PIndices &above,
               PIndices &below, PIndices &other) {
+
     const grid_map::Matrix &terrain_layer = grid[input_layer_name_];
+
+    // Iterate through all the input indices which are points
     for (size_t i = 0; i < input_indices.indices.size(); i++) {
-      int p_idx = input_indices.indices[i];
+      const int p_idx = input_indices.indices[i];
       const PointType &p = cloud[p_idx];
+
+      // varible for retrieving the grid map cell index
       grid_map::Index idx;
+
       if (!grid.getIndex(grid_map::Position(p.x, p.y), idx)) {
+        // (1) If the point is outside of the grid map, add to "other"
         other.indices.push_back(p_idx);
       } else if (!std::isfinite(terrain_layer(idx[0], idx[1]))) {
+        // (2) If the terrain information is not available, add to "other"
         other.indices.push_back(p_idx);
       } else {
-        float diff_z = p.z - terrain_layer(idx[0], idx[1]);
+        // (3) If the terrain information is available, compare the height
+        const float diff_z = p.z - terrain_layer(idx[0], idx[1]);
         if (diff_z < -threshold_) {
           below.indices.push_back(p_idx);
-        } else if (diff_z > threshold_) {
+        } else if (diff_z < threshold_) {
+          ground.indices.push_back(p_idx);
+        } else if (diff_z <= 3.0) {
+          // TODO: 3.0[m] is the maximum height of moving objects
           above.indices.push_back(p_idx);
         } else {
-          ground.indices.push_back(p_idx);
+          other.indices.push_back(p_idx);
         }
       }
     }

@@ -31,7 +31,11 @@ MovingPointIdentification::buildRangeImage(const CloudType &input) {
       continue;
     }
 
-    layer(idx[0], idx[1]) = range;
+    if (!std::isfinite(layer(idx[0], idx[1]))) {
+      layer(idx[0], idx[1]) = range;
+    } else {
+      layer(idx[0], idx[1]) = std::min(layer(idx[0], idx[1]), range);
+    }
   }
 
   return range_im;
@@ -69,6 +73,7 @@ MovingPointIdentification::compareRange(const float scan_range,
   else if (target_range > scan_range + threshold_)
     return ComparisonResult::CASE_B;
   else if (target_range < scan_range - threshold_)
+    // the target is closer than the scan point => it should be moving
     return ComparisonResult::CASE_C;
   else
     return ComparisonResult::CASE_A;
@@ -103,18 +108,18 @@ MovingPointIdentification::getFusedResult(const grid_map::GridMap &range_im,
       if (0 > idx[1] || idx[1] >= im_size[1])
         continue;
 
-      float scan_range = layer(idx[0], idx[1]);
+      const float scan_range = layer(idx[0], idx[1]);
       ComparisonResult res = compareRange(scan_range, target_range);
       counter[(int)res]++;
     }
   }
 
   if (counter[0] != 0)
-    return FusedResult::CASE_A;
+    return FusedResult::CASE_A; // static
   else if (counter[1] != 0)
     return FusedResult::OTHERWISE;
   else if (counter[2] != 0)
-    return FusedResult::CASE_C;
+    return FusedResult::CASE_C; // dynamic
 
   return FusedResult::OTHERWISE;
 }
@@ -129,8 +134,8 @@ void MovingPointIdentification::compareSubmapAndScan(
   for (int i = 0; i < submap.size(); ++i) {
     float range, pos_h, pos_v;
     getRangeImageCoordinate(submap[i], range, pos_h, pos_v);
-    FusedResult res = getFusedResult(range_im, layer,
-                                     grid_map::Position(pos_h, pos_v), range);
+    const FusedResult res = getFusedResult(
+        range_im, layer, grid_map::Position(pos_h, pos_v), range);
     if (res == FusedResult::CASE_A)
       vote_list_static[indices[i]]++;
     else if (res == FusedResult::CASE_C)
@@ -257,15 +262,18 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
                                         const PIndices::ConstPtr &in_indices,
                                         PIndices &static_indices,
                                         PIndices &dynamic_indices) {
+  // (1) If cloud or loader is empty, return false
   if (cloud->empty() || loader->getSize() == 0 || in_indices->indices.empty())
     return false;
 
+  // (2) Create downsampled cloud and its index mapping
   CloudType::Ptr cloud_ds(new CloudType);
   std::vector<pcl::Indices> vg_indices;
   vg_.setInputCloud(cloud);
   vg_.setIndices(in_indices);
   vg_.filterWithOutputIndices(*cloud_ds, vg_indices);
 
+  // (3) Define some variables which will be used in the loop
   std::vector<int> vote_list_static;
   vote_list_static.resize(cloud_ds->size(), 0);
   std::vector<int> vote_list_dynamic;
@@ -282,66 +290,68 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
   submap_indices.reserve(cloud_ds->size());
   Eigen::Affine3f last_lidar_pose = Eigen::Affine3f::Identity();
 
+  // (4) Iterate all submaps and compare with range image
   for (int i = 0; i < loader->getSize(); ++i) {
-    // auto st = ros::WallTime::now();
+    // (4-1) Load frame and skip if empty
     DataLoaderBase::Frame frame = loader->loadFrame(i);
     if (frame.frame->empty()) {
       RCLCPP_WARN_STREAM(rclcpp::get_logger("moving_point_identification"),
                          "Frame " << frame.idx + 1 << " is empty.");
       continue;
     }
-    // std::cout << "load: " << (ros::WallTime::now() - st).toSec() << " sec"
-    // << std::endl;
 
+    // (4-2) Skip for reduce computation time. If frame_skip_ = 1, it means the
+    // computation cost wil be halved.
     if (i % (frame_skip_ + 1) != 0)
       continue;
 
-    // st = ros::WallTime::now();
+    // (4-3) Build range image from the not-downsampled current scan
     grid_map::GridMapPtr range_im = buildRangeImage(*frame.frame);
-    // std::cout << "build range image: " << (ros::WallTime::now() -
-    // st).toSec() << " sec" << std::endl;
 
-    Eigen::Affine3f lidar_pose =
+    // (4-4) Build submap based on the current pose when the accumulated motion
+    // exceeds a threshold.
+    // NOTE: The submap is the partial pointcloud of the downsampled whole map
+    // which is within lidar_range_ from the current lidar pose.
+    const Eigen::Affine3f lidar_pose =
         Eigen::Translation3f(frame.t) * frame.r.matrix();
     if (submap->empty() || (last_lidar_pose.translation() - frame.t).norm() >
                                submap_update_dist_) {
-      // st = ros::WallTime::now();
       buildSubMap(*adapter.cloud_ptr_, kdtree, lidar_pose, *submap,
                   submap_indices);
       last_lidar_pose = lidar_pose;
-      // std::cout << "build sub map: " << (ros::WallTime::now() - st).toSec()
-      // << " sec" << std::endl;
     }
+
+    // (4-5) Inrementally vote static or dynamic by comparing range image and
+    // submap.
     pcl::transformPointCloud(*submap, *lidar_coordinate_submap,
                              lidar_pose.inverse());
-
-    // st = ros::WallTime::now();
     compareSubmapAndScan(*range_im, *lidar_coordinate_submap, submap_indices,
                          vote_list_static, vote_list_dynamic);
-    // std::cout << "compare: " << (ros::WallTime::now() - st).toSec() << "
-    // sec" << std::endl;
-
-    publish(frame, cloud_ds, submap_indices, vote_list_static,
-            vote_list_dynamic);
 
     if (i % 100 == 0) {
+      publish(frame, cloud_ds, submap_indices, vote_list_static,
+              vote_list_dynamic);
+
       RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
                          "Compute Moving Point Identification: "
                              << i + 1 << " / " << loader->getSize());
     }
   }
 
-  DataLoaderBase::Frame dummy_frame;
-  dummy_frame.t = loader->getFrameInfo(loader->getSize() - 1).t;
-  dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
-  // TODO: This causes `[ros2run]: Floating point exception`
-  // publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
-  //         vote_list_dynamic); // dummy
+  {
+    // TODO: This causes `[ros2run]: Floating point exception`
+    // DataLoaderBase::Frame dummy_frame;
+    // dummy_frame.t = loader->getFrameInfo(loader->getSize() - 1).t;
+    // dummy_frame.r = loader->getFrameInfo(loader->getSize() - 1).r;
+    // publish(dummy_frame, cloud_ds, std::vector<int>(), vote_list_static,
+    //         vote_list_dynamic); // dummy
+  }
 
   RCLCPP_INFO_STREAM(rclcpp::get_logger("moving_point_indentification"),
                      "Compute Moving Point Identification: "
                          << loader->getSize() << " / " << loader->getSize());
 
+  // (5) Push back results depending on votes
   static_indices.indices.clear();
   dynamic_indices.indices.clear();
   for (int i = 0; i < cloud_ds->size(); i++) {

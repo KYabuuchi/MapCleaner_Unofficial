@@ -483,8 +483,8 @@ public:
         gridMap2Cloud(*grid_map_ptr, "elevation", "intensity");
     publishCloud(terrain_pcd, nullptr, frame_id_, pub_terrain_);
 
-    // (2) Divide Point Cloud into Static and Dynamic
-    // (2-1) Extract Non-ground Points on Terrain
+    // (1-9) Divide Cloud into "Ground", "Ground Above", "Ground Below", and
+    // "Other"
     PIndices::Ptr ground_indices(new PIndices);
     PIndices::Ptr ground_above_indices(new PIndices);
     PIndices::Ptr ground_below_indices(new PIndices);
@@ -496,12 +496,16 @@ public:
       return;
     }
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Divide By Terrain");
+
+    // initial_ground_indices and nonground_indices are no longer needed
     initial_ground_indices->indices.clear(); // release memory
     initial_ground_indices->indices.shrink_to_fit();
     nonground_indices->indices.clear();
     nonground_indices->indices.shrink_to_fit();
 
-    // (2-2) Moving Point Identification
+    // (3) Moving Point Identification
+    // input: cloud, ground_above_indices
+    // output: static_indices, dynamic_indices
     PIndices::Ptr static_indices(new PIndices);
     PIndices::Ptr dynamic_indices(new PIndices);
     if (!moving_point_identification_->compute(
