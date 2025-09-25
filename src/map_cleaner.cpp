@@ -506,7 +506,7 @@ public:
     nonground_indices->indices.clear();
     nonground_indices->indices.shrink_to_fit();
 
-    // (3) Moving Point Identification
+    // (2) Moving Point Identification
     // input: cloud, ground_above_indices
     // output: static_indices, dynamic_indices
     PIndices::Ptr static_indices(new PIndices);
@@ -519,15 +519,18 @@ public:
     RCLCPP_INFO_STREAM(this->get_logger(),
                        "Finished: Moving Point Identification");
 
+    // (3) Medium Filter based on Class
     PIndices::Ptr filtered_static_indices(new PIndices);
     PIndices::Ptr filtered_dynamic_indices(new PIndices);
-    ClassMedianFilter class_median_filter(5);
+    const int neighbor_size =
+        this->declare_parameter<int>("class_median_filter.neighbor_size");
+    ClassMedianFilter class_median_filter(neighbor_size);
     class_median_filter.filter(cloud, static_indices, dynamic_indices,
                                *filtered_static_indices,
                                *filtered_dynamic_indices);
     RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Class Median Filter");
 
-    // (3) Publish and Save Results
+    // (4) Publish and Save Results
     publishCloud(cloud, ground_indices, frame_id_, pub_ground_);
     publishCloud(cloud, filtered_static_indices, frame_id_, pub_static_);
     publishCloud(cloud, filtered_dynamic_indices, frame_id_, pub_dynamic_);

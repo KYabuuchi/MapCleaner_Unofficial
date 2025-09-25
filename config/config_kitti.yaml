@@ -90,3 +90,6 @@
       threshold: 0.5
       frame_skip: 0
       submap_update_dist: 10.0
+
+    class_median_filter:
+      neighbor_size: 1

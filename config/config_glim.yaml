@@ -85,8 +85,11 @@
       res_h_deg: 0.40
       res_v_deg: 1.00
       lidar_range: 100.0
-      delta_h: 1
-      delta_v: 1
-      threshold: 0.5
+      delta_h: 2
+      delta_v: 2
+      threshold: 1.0
       frame_skip: 0
       submap_update_dist: 5.0
+
+    class_median_filter:
+      neighbor_size: 1
