@@ -32,6 +32,7 @@ target_link_libraries(patchworkpp Eigen3::Eigen)
 ament_auto_add_executable(${PROJECT_NAME}
   src/map_cleaner.cpp
   src/MovingPointIdentification.cpp
+  src/ClassMedianFilter.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -1,4 +1,5 @@
 #include <map_cleaner/BGKFilter.hpp>
+#include <map_cleaner/ClassMedianFilter.hpp>
 #include <map_cleaner/DataLoader.hpp>
 #include <map_cleaner/DivideByTerrain.hpp>
 #include <map_cleaner/GridMapBuilder.hpp>
@@ -518,10 +519,18 @@ public:
     RCLCPP_INFO_STREAM(this->get_logger(),
                        "Finished: Moving Point Identification");
 
+    PIndices::Ptr filtered_static_indices(new PIndices);
+    PIndices::Ptr filtered_dynamic_indices(new PIndices);
+    ClassMedianFilter class_median_filter(5);
+    class_median_filter.filter(cloud, static_indices, dynamic_indices,
+                               *filtered_static_indices,
+                               *filtered_dynamic_indices);
+    RCLCPP_INFO_STREAM(this->get_logger(), "Finished: Class Median Filter");
+
     // (3) Publish and Save Results
     publishCloud(cloud, ground_indices, frame_id_, pub_ground_);
-    publishCloud(cloud, static_indices, frame_id_, pub_static_);
-    publishCloud(cloud, dynamic_indices, frame_id_, pub_dynamic_);
+    publishCloud(cloud, filtered_static_indices, frame_id_, pub_static_);
+    publishCloud(cloud, filtered_dynamic_indices, frame_id_, pub_dynamic_);
     publishCloud(cloud, ground_below_indices, frame_id_, pub_ground_below_);
     publishCloud(cloud, other_indices, frame_id_, pub_other_);
 

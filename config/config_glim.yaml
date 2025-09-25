@@ -81,12 +81,12 @@
     moving_point_identification:
       voxel_leaf_size: 0.2
       fov_h_deg: 360.0
-      fov_v_deg: 80.0
-      res_h_deg: 0.10
-      res_v_deg: 0.10
+      fov_v_deg: 90.0
+      res_h_deg: 0.40
+      res_v_deg: 1.00
       lidar_range: 100.0
-      delta_h: 10
-      delta_v: 20
+      delta_h: 1
+      delta_v: 1
       threshold: 0.5
       frame_skip: 0
       submap_update_dist: 5.0

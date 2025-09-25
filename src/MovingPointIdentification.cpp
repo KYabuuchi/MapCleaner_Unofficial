@@ -270,8 +270,13 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
                                         PIndices &static_indices,
                                         PIndices &dynamic_indices) {
   // (1) If cloud or loader is empty, return false
-  if (cloud->empty() || loader->getSize() == 0 || in_indices->indices.empty())
+  if (cloud->empty() || loader->getSize() == 0 || in_indices->indices.empty()) {
+    RCLCPP_WARN_STREAM(rclcpp::get_logger("moving_point_identification"),
+                       "Input cloud or loader is empty."
+                           << cloud->size() << ", " << loader->getSize() << ", "
+                           << in_indices->indices.size());
     return false;
+  }
 
   // (2) Create downsampled cloud and its index mapping
   CloudType::Ptr cloud_ds(new CloudType);
@@ -335,7 +340,7 @@ bool MovingPointIdentification::compute(DataLoaderBase::Ptr &loader,
     compareSubmapAndScan(*range_im, *lidar_coordinate_submap, submap_indices,
                          vote_list_static, vote_list_dynamic);
 
-    if (i % 100 == 0) {
+    if (i % 10 == 0) {
       global_range_im = range_im;
       publish(frame, cloud_ds, submap_indices, vote_list_static,
               vote_list_dynamic);
