@@ -93,3 +93,4 @@
 
     class_median_filter:
       neighbor_size: 1
+      median_filter_iteration: 1

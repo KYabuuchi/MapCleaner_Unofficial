@@ -8,7 +8,8 @@ public:
   void filter(const CloudType::Ptr &cloud,
               const PIndices::ConstPtr &static_indices,
               const PIndices::ConstPtr &dynamic_indices,
-              PIndices &out_static_indices, PIndices &out_dynamic_indices);
+              PIndices::Ptr out_static_indices,
+              PIndices::Ptr out_dynamic_indices);
 
 private:
   int neighbor_size_;
