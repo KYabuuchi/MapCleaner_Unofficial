@@ -75,17 +75,22 @@
 
     divide_by_terrain:
       threshold: 0.1
+      height_threshold: 3.0 # higher points will be classified as "other"
       on_terrain_only: false
 
     moving_point_identification:
       voxel_leaf_size: 0.2
       fov_h_deg: 360.0
       fov_v_deg: 90.0
-      res_h_deg: 0.4
-      res_v_deg: 0.9375
-      lidar_range: 50.0
+      res_h_deg: 0.50
+      res_v_deg: 0.50
+      lidar_range: 100.0
       delta_h: 1
       delta_v: 1
-      threshold: 0.1
+      threshold: 1.0
       frame_skip: 0
       submap_update_dist: 5.0
+
+    class_median_filter:
+      neighbor_size: 25
+      median_filter_iteration: 3

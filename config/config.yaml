@@ -75,6 +75,7 @@
   
     divide_by_terrain:
       threshold: 0.172
+      height_threshold: 3.0 # higher points will be classified as "other"
       on_terrain_only: false
   
     moving_point_identification:
@@ -89,4 +90,7 @@
       threshold: 0.15
       frame_skip: 0
       submap_update_dist: 5.0
-  
+
+    class_median_filter:
+      neighbor_size: 1
+      median_filter_iteration: 1
